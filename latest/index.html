@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,user-scalable=no">
   <title>Among Us Web Beta</title>
   <style>
-    html,body,#game{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
-    #game{position:fixed;inset:0}
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
+    #game{position:fixed;inset:0;z-index:1}
     #unity-canvas{display:block;width:100%;height:100%;border:0;outline:0;background:#000}
-    #loader{position:fixed;inset:0;z-index:2;display:none;place-items:center;background:#000;color:#fff;font:16px Arial,sans-serif}
+    #loader{position:fixed;inset:0;z-index:2;display:grid;place-items:center;background:#000;color:#fff;font:16px Arial,sans-serif}
     #loader-box{width:min(440px,82vw);text-align:center}
     #bar{height:12px;margin-top:12px;overflow:hidden;border:1px solid #777;border-radius:8px}
     #fill{width:0;height:100%;background:#35d0ba;transition:width .12s linear}
@@ -32,6 +32,7 @@
     const browserFetch = window.fetch.bind(window);
     const BrowserXMLHttpRequest = window.XMLHttpRequest;
     let assembledBundleUrl = null;
+    let unityReady = false;
 
     let lastPostedProgress = 0;
     function postProgress(percent, message) {
@@ -254,20 +255,36 @@
       assembledBundleUrl = URL.createObjectURL(bundleBlob);
 
       const config = {
-        dataUrl:URL.createObjectURL(dataBlob),
-        frameworkUrl:BUILD + "/AmongUsWeb.framework.js",
-        codeUrl:URL.createObjectURL(wasmBlob),
-        streamingAssetsUrl:STREAMING_ASSETS,
-        companyName:"Innersloth",
-        productName:"Among Us",
-        productVersion:"2026.6.5",
-        showBanner:(message,type) => type === "error" ? errorText.textContent = message : console.warn(message)
+        dataUrl: URL.createObjectURL(dataBlob),
+        frameworkUrl: BUILD + "/AmongUsWeb.framework.js",
+        codeUrl: URL.createObjectURL(wasmBlob),
+        streamingAssetsUrl: STREAMING_ASSETS,
+        companyName: "Innersloth",
+        productName: "Among Us",
+        productVersion: "2026.6.5",
+        showBanner: (message, type) => {
+          if (type === "error") { errorText.textContent = message; }
+          else { console.warn(message); }
+        }
       };
 
       updateProgress(70, "Starting game…");
-      await createUnityInstance(canvas, config, value => updateProgress(70 + value * 30, "Starting game…"));
+      await createUnityInstance(canvas, config, (value) => {
+        updateProgress(70 + value * 28, "Starting game…");
+      });
+
+      unityReady = true;
       loader.style.display = "none";
+      canvas.focus();
       updateProgress(100, "Ready!");
+
+      try {
+        window.parent.postMessage({
+          type: 'amongus-progress',
+          progress: 1,
+          message: 'Ready!'
+        }, '*');
+      } catch (e) {}
     }
 
     start().catch(error => {
