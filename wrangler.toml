@@ -1,0 +1,5 @@
+name = "auwebport"
+compatibility_date = "2026-11-09"
+
+[assets]
+directory = "./"
